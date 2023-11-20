@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutterfinal/pages/HomePage.dart';
 
@@ -9,8 +10,30 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  TextEditingController _usernameController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  TextEditingController emailController = TextEditingController();
+  TextEditingController passwordController = TextEditingController();
+  bool _passwordVisible = false;
+
+  void signIn() async {
+    try {
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: emailController.text,
+        password: passwordController.text,
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomePage(),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      final errorMsg = e.message ?? 'E-mal ou senha inválidos';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,26 +48,32 @@ class _LoginPageState extends State<LoginPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               TextField(
-                controller: _usernameController,
-                decoration: InputDecoration(labelText: 'Login'),
+                controller: emailController,
+                decoration: InputDecoration(labelText: 'Email'),
               ),
               TextField(
-                controller: _passwordController,
+                controller: passwordController,
                 obscureText: true,
-                decoration: InputDecoration(labelText: 'Senha'),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Senha',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _passwordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _passwordVisible = !_passwordVisible;
+                      });
+                    },
+                  ),
+                ),
               ),
               SizedBox(height: 16.0),
               ElevatedButton(
-                onPressed: () {
-                  String username = _usernameController.text;
-                  String password = _passwordController.text;
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (BuildContext context) => HomePage(),
-                    ),
-                  );
-                },
+                onPressed: signIn,
                 child: Text('Entrar'),
               ),
               SizedBox(height: 16.0),
