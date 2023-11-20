@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "339068204008",
+    "firebase_url": "https://flutterfinal-4f9a1-default-rtdb.firebaseio.com",
+    "project_id": "flutterfinal-4f9a1",
+    "storage_bucket": "flutterfinal-4f9a1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339068204008:android:b00d44a4eb737febf32a5d",
+        "android_client_info": {
+          "package_name": "com.example.flutterfinal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAxj3SF8cK0HCwhPCoGJ9Ve1U1acZe9bPU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
