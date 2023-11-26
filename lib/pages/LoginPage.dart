@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutterfinal/auth/Autentication.dart';
 import 'package:flutterfinal/pages/HomePage.dart';
 
 class LoginPage extends StatefulWidget {
@@ -10,30 +11,14 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  AuthService _authService = AuthService();
   TextEditingController emailController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  bool _passwordVisible = false;
-
-  void signIn() async {
-    try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
-      );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomePage(),
-        ),
-      );
-    } on FirebaseAuthException catch (e) {
-      final errorMsg = e.message ?? 'E-mal ou senha inválidos';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
-    }
-  }
+  TextEditingController loginPasswordController = TextEditingController();
+  TextEditingController registerPasswordController = TextEditingController();
+  TextEditingController confirmPasswordController = TextEditingController();
+  bool _loginPasswordVisible = false;
+  bool _registerPasswordVisible = false;
+  bool _confirmPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -47,33 +32,15 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-              ),
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Senha',
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _passwordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        _passwordVisible = !_passwordVisible;
-                      });
-                    },
-                  ),
-                ),
+              _buildTextField('Email', emailController),
+              _buildPasswordTextField(
+                loginPasswordController,
+                _loginPasswordVisible,
+                _toggleLoginPasswordVisibility,
               ),
               SizedBox(height: 16.0),
               ElevatedButton(
-                onPressed: signIn,
+                onPressed: _signIn,
                 child: Text('Entrar'),
               ),
               SizedBox(height: 16.0),
@@ -95,6 +62,70 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
+  Widget _buildTextField(String label, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  Widget _buildPasswordTextField(
+    TextEditingController controller,
+    bool isVisible,
+    Function() toggleVisibility,
+  ) {
+    return TextField(
+      controller: controller,
+      obscureText: !isVisible,
+      decoration: InputDecoration(
+        border: OutlineInputBorder(),
+        labelText: 'Senha',
+        suffixIcon: IconButton(
+          icon: Icon(
+            isVisible ? Icons.visibility : Icons.visibility_off,
+          ),
+          onPressed: toggleVisibility,
+        ),
+      ),
+    );
+  }
+
+  void _toggleLoginPasswordVisibility() {
+    setState(() {
+      _loginPasswordVisible = !_loginPasswordVisible;
+    });
+  }
+
+  void _toggleRegisterPasswordVisibility() {
+    setState(() {
+      _registerPasswordVisible = !_registerPasswordVisible;
+    });
+  }
+
+  void _toggleConfirmPasswordVisibility() {
+    setState(() {
+      _confirmPasswordVisible = !_confirmPasswordVisible;
+    });
+  }
+
+  void _signIn() async {
+    String email = emailController.text;
+    String password = loginPasswordController.text;
+    User? user = await _authService.signInWithEmailAndPassword(email, password);
+    if (user != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (BuildContext context) => HomePage(),
+        ),
+      );
+    } else {
+      _showErrorDialog("Credenciais inválidas");
+      emailController.clear();
+      loginPasswordController.clear();
+    }
+  }
+
   void _showRegistrationDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -104,24 +135,26 @@ class _LoginPageState extends State<LoginPage> {
           content: SingleChildScrollView(
             child: Column(
               children: [
-                TextField(
-                  decoration: InputDecoration(labelText: 'Nome'),
+                _buildTextField('Email', emailController),
+                _buildPasswordTextField(
+                  registerPasswordController,
+                  _registerPasswordVisible,
+                  _toggleRegisterPasswordVisibility,
                 ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Email'),
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Senha'),
-                ),
-                TextField(
-                  decoration: InputDecoration(labelText: 'Confirme a senha'),
+                _buildPasswordTextField(
+                  confirmPasswordController,
+                  _confirmPasswordVisible,
+                  _toggleConfirmPasswordVisibility,
                 ),
               ],
             ),
           ),
           actions: [
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                _register(registerPasswordController.text,
+                    confirmPasswordController.text);
+              },
               child: Text('Cadastrar'),
             ),
             TextButton(
@@ -129,6 +162,45 @@ class _LoginPageState extends State<LoginPage> {
                 Navigator.of(context).pop();
               },
               child: Text('Cancelar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _register(String password, String confirmPassword) async {
+    String email = emailController.text;
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      _showErrorDialog('Todos os campos são obrigatórios');
+      return;
+    }
+    if (password != confirmPassword) {
+      _showErrorDialog('Senha e Confirme a senha não coincidem');
+      return;
+    }
+    User? user =
+        await _authService.registerWithEmailAndPassword(email, password);
+    if (user != null) {
+      Navigator.of(context).pop();
+    } else {
+      _showErrorDialog('Erro ao cadastrar usuário');
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Erro de Autenticação'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
             ),
           ],
         );
